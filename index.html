@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OEE Tracker Pro - Automotive Manufacturing</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- Professional Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">OEE Tracker Pro</div>
+            <div class="nav-links">
+                <button class="nav-link active" data-page="dashboard">Dashboard</button>
+                <button class="nav-link" data-page="data-entry">Data Entry</button>
+                <button class="nav-link" data-page="history">History</button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Dashboard Page -->
+            <div class="page active" id="dashboard-page">
+                <h1>OEE Dashboard</h1>
+                <div class="dashboard-overview">
+                    <!-- Dashboard content will be loaded by dashboard.js -->
+                    <div class="card" style="text-align: center; padding: 3rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚙️</div>
+                        <h3>Loading Dashboard...</h3>
+                        <p style="color: var(--gray); margin-bottom: 2rem;">
+                            Initializing OEE tracking system...
+                        </p>
+                        <div class="loading" style="margin: 0 auto;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Entry Page -->
+            <div class="page" id="data-entry-page">
+                <h1>Manual OEE Data Entry</h1>
+                <div class="data-entry-form">
+                    <!-- Form will be loaded by data-entry.js -->
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div class="page" id="history-page">
+                <h1>OEE History & Reports</h1>
+                <div class="card">
+                    <h3>Historical Data</h3>
+                    <p>OEE history and reporting functionality coming soon...</p>
+                    <div style="margin-top: 2rem;">
+                        <button class="btn" onclick="dashboard.exportData()">
+                            📊 Export All Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/data-entry.js"></script>
+</body>
+</html>
