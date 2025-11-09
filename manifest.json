@@ -2,7 +2,7 @@
   "name": "OEE Tracker Pro - Frank Dudley Ltd",
   "short_name": "OEE Tracker",
   "description": "Professional OEE Tracking for Automotive Manufacturing",
-  "start_url": "/",
+  "start_url": "/oee-tracker/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#1e3a8a",
