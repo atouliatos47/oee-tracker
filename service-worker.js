@@ -1,5 +1,5 @@
-const CACHE_NAME = 'oee-tracker-v1';
-const ASSETS = [
+const CACHE_NAME = 'oee-tracker-v2';
+const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/styles.css',
