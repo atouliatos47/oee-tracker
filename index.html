@@ -3,15 +3,615 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OEE Tracker Pro - Automotive Manufacturing</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <title>OEE Tracker Pro - Frank Dudley Ltd</title>
+    <link rel="icon" href="icon.png">
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- TensorFlow.js for ML predictions -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --primary-dark: #1a252f;
+            --secondary: #3498db;
+            --secondary-dark: #2980b9;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #95a5a6;
+            --gray-light: #bdc3c7;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        #app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-brand img {
+            height: 56px;
+            width: auto;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--light);
+            padding: 0.25rem;
+            border-radius: var(--border-radius);
+        }
+
+        .nav-link {
+            background: none;
+            border: none;
+            color: var(--dark);
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .nav-link.active,
+        .nav-link:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        #main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--box-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            color: var(--dark);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--gray-light);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: white;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #229954);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--gray), #7f8c8d);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-card:nth-child(1) { border-left-color: #f39c12; }
+        .stat-card:nth-child(2) { border-left-color: #27ae60; }
+        .stat-card:nth-child(3) { border-left-color: #3498db; }
+        .stat-card:nth-child(4) { border-left-color: #9b59b6; }
+        .stat-card:nth-child(5) { border-left-color: #e74c3c; }
+
+        .prediction-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: var(--transition);
+        }
+
+        .prediction-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .prediction-label {
+            color: var(--gray);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .prediction-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+
+        .prediction-confidence,
+        .prediction-detail {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-top: 0.5rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .data-table tr:hover {
+            background: var(--light);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .result-item {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .result-item:hover {
+            transform: scale(1.05);
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .last-updated {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .nav-links {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .nav-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+            
+            #main-content {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-container {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+            transition: var(--transition);
+        }
+
+        .close-btn:hover {
+            color: var(--danger);
+        }
+
+        .area-list {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .area-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--light);
+            margin-bottom: 0.5rem;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .area-item:hover {
+            background: var(--gray-light);
+        }
+
+        .area-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .area-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .area-input-group input {
+            flex: 1;
+        }
+
+        .manage-areas-btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .manage-areas-btn:hover {
+            background: var(--secondary-dark);
+        }
+
+        /* Charts and History Page Styles */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="app">
-        <!-- Professional Navigation -->
         <nav class="navbar">
-            <div class="nav-brand">OEE Tracker Pro</div>
+            <div class="nav-brand">
+                <img src="icon.png" alt="FDL" onerror="this.style.display='none'">
+                OEE Tracker Pro
+            </div>
             <div class="nav-links">
                 <button class="nav-link active" data-page="dashboard">Dashboard</button>
                 <button class="nav-link" data-page="data-entry">Data Entry</button>
@@ -19,52 +619,1684 @@
             </div>
         </nav>
 
-        <!-- Main Content Area -->
         <main id="main-content">
-            <!-- Dashboard Page -->
-            <div class="page active" id="dashboard-page">
+            <div id="dashboard-page" class="page active">
                 <h1>OEE Dashboard</h1>
-                <div class="dashboard-overview">
-                    <!-- Dashboard content will be loaded by dashboard.js -->
-                    <div class="card" style="text-align: center; padding: 3rem;">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚙️</div>
-                        <h3>Loading Dashboard...</h3>
-                        <p style="color: var(--gray); margin-bottom: 2rem;">
-                            Initializing OEE tracking system...
-                        </p>
-                        <div class="loading" style="margin: 0 auto;"></div>
+                
+                <div class="dashboard-header">
+                    <div>
+                        <div class="section-title">Production Overview</div>
+                        <div class="last-updated" id="last-updated">Last updated: --</div>
+                    </div>
+                    <button class="btn" onclick="loadDashboardData()">REFRESH</button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Overall OEE</div>
+                        <div class="stat-value" id="overall-oee">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Availability</div>
+                        <div class="stat-value" id="avg-availability">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Performance</div>
+                        <div class="stat-value" id="avg-performance">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Quality</div>
+                        <div class="stat-value" id="avg-quality">--</div>
+                    </div>
+                    <div class="stat-card" style="cursor: pointer;" onclick="toggleStatusDetail()">
+                        <div class="stat-label">Production Status</div>
+                        <div class="stat-value" id="production-status">
+                            <span id="running-count" style="color: #27ae60;">0</span> / 
+                            <span id="stopped-count" style="color: #e74c3c;">0</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.5rem;">Running / Issues</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Data Entry Page -->
-            <div class="page" id="data-entry-page">
-                <h1>Manual OEE Data Entry</h1>
-                <div class="data-entry-form">
-                    <!-- Form will be loaded by data-entry.js -->
+                <!-- Production Status Details -->
+                <div class="card" id="status-detail" style="display: none;">
+                    <h3>📊 Production Status Detail</h3>
+                    <div id="status-detail-content"></div>
+                </div>
+
+                <!-- AI Predictions Section -->
+                <div class="card" id="predictions-panel" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(46, 204, 113, 0.1)); border-left: 4px solid #3498db;">
+                    <h2>🤖 AI Predictions & Insights</h2>
+                    <div id="predictions-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="prediction-card">
+                            <div class="prediction-label">📈 Predicted OEE (Tomorrow)</div>
+                            <div class="prediction-value" id="predicted-oee">--</div>
+                            <div class="prediction-confidence" id="prediction-confidence">--</div>
+                        </div>
+                        <div class="prediction-card">
+                            <div class="prediction-label">📊 Trend Direction</div>
+                            <div class="prediction-value" id="trend-direction">--</div>
+                            <div class="prediction-detail" id="trend-detail">--</div>
+                        </div>
+                        <div class="prediction-card">
+                            <div class="prediction-label">⭐ Best Performing</div>
+                            <div class="prediction-value" id="best-performer">--</div>
+                            <div class="prediction-detail" id="best-performer-detail">--</div>
+                        </div>
+                        <div class="prediction-card">
+                            <div class="prediction-label">⚠️ Needs Attention</div>
+                            <div class="prediction-value" id="needs-attention">--</div>
+                            <div class="prediction-detail" id="attention-detail">--</div>
+                        </div>
+                    </div>
+                    <div id="ml-status" style="margin-top: 1rem; font-size: 0.85rem; color: var(--gray); text-align: center;">
+                        Analyzing data...
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Recent OEE Data</h2>
+                    <div class="button-container" style="margin-bottom: 1.5rem;">
+                        <button class="btn" onclick="recalculateAllEntries()">🔄 Recalculate All</button>
+                        <button class="btn btn-secondary" onclick="exportData()">📥 Export Data</button>
+                        <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+                    </div>
+                    <table class="data-table" id="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Area</th>
+                                <th>Shift</th>
+                                <th>Availability</th>
+                                <th>Performance</th>
+                                <th>Quality</th>
+                                <th>OEE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="loading">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- History Page -->
-            <div class="page" id="history-page">
+            <div id="data-entry-page" class="page">
+                <h1>Enter OEE Data</h1>
+                <div id="data-entry-form"></div>
+            </div>
+
+            <div id="history-page" class="page">
                 <h1>OEE History & Reports</h1>
+
                 <div class="card">
-                    <h3>Historical Data</h3>
-                    <p>OEE history and reporting functionality coming soon...</p>
-                    <div style="margin-top: 2rem;">
-                        <button class="btn" onclick="dashboard.exportData()">
-                            📊 Export All Data
+                    <h2>Filter Data</h2>
+                    <div class="filter-container">
+                        <div class="filter-group">
+                            <label for="filter-start-date">Start Date</label>
+                            <input type="date" id="filter-start-date" />
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-end-date">End Date</label>
+                            <input type="date" id="filter-end-date" />
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-area">Production Area</label>
+                            <select id="filter-area">
+                                <option value="">All Areas</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn" onclick="applyHistoryFilters()">Apply Filters</button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn btn-secondary" onclick="resetHistoryFilters()">Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📈 OEE Trend Over Time</h2>
+                    <div class="chart-container">
+                        <canvas id="oee-trend-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+                    <div class="card">
+                        <h3>📊 Average Metrics</h3>
+                        <div class="chart-container">
+                            <canvas id="metrics-bar-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>🏭 OEE by Production Area</h3>
+                        <div class="chart-container">
+                            <canvas id="area-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📋 Historical Data Table</h2>
+                    <div class="button-container" style="margin-bottom: 1.5rem;">
+                        <button class="btn btn-secondary" onclick="exportData()">
+                            📥 Export Filtered Data
                         </button>
+                    </div>
+                    <div id="history-table-container">
+                        <!-- Table will be populated here -->
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- JavaScript Files -->
-    <script src="js/storage.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/data-entry.js"></script>
+    <!-- Area Management Modal -->
+    <div id="area-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Production Areas</h2>
+                <button class="close-btn" onclick="closeAreaModal()">&times;</button>
+            </div>
+            
+            <div class="area-input-group">
+                <input type="text" id="new-area-input" placeholder="Enter new area name" />
+                <button class="btn btn-success btn-small" onclick="addArea()">➕ Add</button>
+            </div>
+
+            <ul class="area-list" id="area-list">
+                <!-- Areas will be populated here -->
+            </ul>
+
+            <div style="border-top: 1px solid var(--light); padding-top: 1rem; margin-top: 1rem;">
+                <button class="btn btn-secondary btn-small" onclick="closeAreaModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Storage Module
+        const STORAGE_KEY = 'oee_data';
+        const AREAS_KEY = 'oee_production_areas';
+
+        function getEntries() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveEntry(entry) {
+            const entries = getEntries();
+            // Add unique ID if not present
+            if (!entry.id) {
+                entry.id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            }
+            entries.push(entry);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        }
+
+        function clearEntries() {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+
+        function recalculateAllEntries() {
+            if (!confirm('This will recalculate OEE for all existing entries using the correct formula. Continue?')) {
+                return;
+            }
+
+            const entries = getEntries();
+            if (entries.length === 0) {
+                alert('No entries to recalculate');
+                return;
+            }
+
+            let recalculated = 0;
+            const updatedEntries = entries.map(entry => {
+                // Recalculate OEE metrics with correct formula
+                const availability = (entry.runtime / entry.plannedProductionTime) * 100;
+                const idealTime = entry.totalParts * entry.idealCycleTime; // Already in minutes
+                const performance = (idealTime / entry.runtime) * 100;
+                const quality = (entry.goodParts / entry.totalParts) * 100;
+                const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
+
+                recalculated++;
+
+                return {
+                    ...entry,
+                    availability,
+                    performance,
+                    quality,
+                    oee
+                };
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
+            
+            alert(`Successfully recalculated ${recalculated} entries!`);
+            
+            // Refresh dashboard
+            if (document.getElementById('dashboard-page').classList.contains('active')) {
+                loadDashboardData();
+            }
+            if (document.getElementById('history-page').classList.contains('active')) {
+                applyHistoryFilters();
+            }
+        }
+
+        function deleteEntry(entryId) {
+            if (!confirm('Are you sure you want to delete this entry?')) {
+                return;
+            }
+            
+            const entries = getEntries();
+            const filteredEntries = entries.filter(e => e.id !== entryId);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredEntries));
+            
+            // Refresh all displays
+            if (document.getElementById('dashboard-page').classList.contains('active')) {
+                loadDashboardData();
+            }
+            if (document.getElementById('history-page').classList.contains('active')) {
+                applyHistoryFilters();
+            }
+        }
+
+        function editEntry(entryId) {
+            const entries = getEntries();
+            const entry = entries.find(e => e.id === entryId);
+            
+            if (!entry) {
+                alert('Entry not found!');
+                return;
+            }
+            
+            // Show edit modal with pre-filled values
+            showEditModal(entry);
+        }
+
+        function showEditModal(entry) {
+            // Create modal HTML
+            const modalHTML = `
+                <div id="edit-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div class="card" style="max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <h2>Edit OEE Entry</h2>
+                        <form id="edit-form" onsubmit="saveEditedEntry(event, '${entry.id}'); return false;">
+                            <div class="form-group">
+                                <label>Production Area</label>
+                                <select id="edit-area" required>
+                                    ${getAreas().map(area => `<option value="${area}" ${area === entry.area ? 'selected' : ''}>${area}</option>`).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Shift</label>
+                                <select id="edit-shift" required>
+                                    <option value="Day Shift" ${entry.shift === 'Day Shift' ? 'selected' : ''}>Day Shift</option>
+                                    <option value="Night Shift" ${entry.shift === 'Night Shift' ? 'selected' : ''}>Night Shift</option>
+                                    <option value="Morning Shift" ${entry.shift === 'Morning Shift' ? 'selected' : ''}>Morning Shift</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="edit-date" value="${entry.date}" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Planned Production Time (minutes)</label>
+                                <input type="number" id="edit-plannedProductionTime" value="${entry.plannedProductionTime}" step="0.1" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Actual Runtime (minutes)</label>
+                                <input type="number" id="edit-runtime" value="${entry.runtime}" step="0.1" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Total Parts Produced</label>
+                                <input type="number" id="edit-totalParts" value="${entry.totalParts}" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Good Parts</label>
+                                <input type="number" id="edit-goodParts" value="${entry.goodParts}" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Ideal Cycle Time (minutes per part)</label>
+                                <input type="number" id="edit-idealCycleTime" value="${entry.idealCycleTime}" step="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Downtime Reason</label>
+                                <textarea id="edit-downtimeReason" rows="3">${entry.downtimeReason || ''}</textarea>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button type="submit" class="btn btn-success" style="flex: 1;">💾 Save Changes</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="flex: 1;">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function saveEditedEntry(event, entryId) {
+            event.preventDefault();
+            
+            const formData = {
+                id: entryId,
+                area: document.getElementById('edit-area').value,
+                shift: document.getElementById('edit-shift').value,
+                date: document.getElementById('edit-date').value,
+                plannedProductionTime: parseFloat(document.getElementById('edit-plannedProductionTime').value),
+                runtime: parseFloat(document.getElementById('edit-runtime').value),
+                totalParts: parseInt(document.getElementById('edit-totalParts').value),
+                goodParts: parseInt(document.getElementById('edit-goodParts').value),
+                idealCycleTime: parseFloat(document.getElementById('edit-idealCycleTime').value),
+                downtimeReason: document.getElementById('edit-downtimeReason').value
+            };
+            
+            // Validate
+            if (formData.goodParts > formData.totalParts) {
+                alert('Good parts cannot exceed total parts!');
+                return;
+            }
+            
+            if (formData.runtime > formData.plannedProductionTime) {
+                alert('Runtime cannot exceed planned production time!');
+                return;
+            }
+            
+            // Calculate OEE metrics
+            const availability = (formData.runtime / formData.plannedProductionTime) * 100;
+            const idealTime = formData.totalParts * formData.idealCycleTime; // Already in minutes
+            const performance = (idealTime / formData.runtime) * 100;
+            const quality = (formData.goodParts / formData.totalParts) * 100;
+            const oee = (availability * performance * quality) / 10000;
+            
+            formData.availability = availability;
+            formData.performance = performance;
+            formData.quality = quality;
+            formData.oee = oee;
+            
+            // Update entry in storage
+            const entries = getEntries();
+            const index = entries.findIndex(e => e.id === entryId);
+            if (index !== -1) {
+                entries[index] = formData;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+                
+                closeEditModal();
+                
+                // Refresh all displays
+                if (document.getElementById('dashboard-page').classList.contains('active')) {
+                    loadDashboardData();
+                }
+                if (document.getElementById('history-page').classList.contains('active')) {
+                    applyHistoryFilters();
+                }
+                
+                alert('Entry updated successfully!');
+            }
+        }
+
+
+        // Area Management Functions
+        function getDefaultAreas() {
+            return [
+                "Press 1",
+                "Press 2",
+                "Press 3",
+                "Welding Line A",
+                "Welding Line B",
+                "Assembly 1",
+                "Paint Shop"
+            ];
+        }
+
+        function getAreas() {
+            const areas = localStorage.getItem(AREAS_KEY);
+            if (!areas) {
+                const defaultAreas = getDefaultAreas();
+                saveAreas(defaultAreas);
+                return defaultAreas;
+            }
+            return JSON.parse(areas);
+        }
+
+        function saveAreas(areas) {
+            localStorage.setItem(AREAS_KEY, JSON.stringify(areas));
+        }
+
+        function addArea() {
+            const input = document.getElementById('new-area-input');
+            const newArea = input.value.trim();
+            
+            if (!newArea) {
+                alert('Please enter an area name');
+                return;
+            }
+
+            const areas = getAreas();
+            
+            if (areas.includes(newArea)) {
+                alert('This area already exists');
+                return;
+            }
+
+            areas.push(newArea);
+            saveAreas(areas);
+            input.value = '';
+            
+            // Update UI immediately
+            renderAreaList();
+            renderDataEntryForm(); // Refresh the form dropdown
+            updateHistoryAreaFilter(); // Update history filter dropdown
+            
+            // Note: No need to refresh dashboard/history since there's no data for the new area yet
+        }
+
+        function deleteArea(areaName) {
+            if (!confirm(`Are you sure you want to delete "${areaName}"? This will also delete all data entries for this area.`)) {
+                return;
+            }
+
+            const areas = getAreas();
+            const filteredAreas = areas.filter(area => area !== areaName);
+            
+            if (filteredAreas.length === 0) {
+                alert('You must have at least one production area');
+                return;
+            }
+
+            // Delete all OEE entries for this area
+            const entries = getEntries();
+            const filteredEntries = entries.filter(entry => entry.area !== areaName);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredEntries));
+
+            // Save the updated areas list
+            saveAreas(filteredAreas);
+            
+            // Update UI immediately
+            renderAreaList();
+            renderDataEntryForm(); // Refresh the form dropdown
+            updateHistoryAreaFilter(); // Update history filter dropdown
+            
+            // Refresh dashboard if it's active
+            if (document.getElementById('dashboard-page').classList.contains('active')) {
+                loadDashboardData();
+            }
+            
+            // Refresh history table if it's active
+            if (document.getElementById('history-page').classList.contains('active')) {
+                applyHistoryFilters();
+            }
+        }
+
+        function editArea(oldName) {
+            const newName = prompt('Enter new name for this area:', oldName);
+            
+            if (!newName || newName.trim() === '') {
+                return;
+            }
+
+            const trimmedName = newName.trim();
+            
+            if (trimmedName === oldName) {
+                return;
+            }
+
+            const areas = getAreas();
+            
+            if (areas.includes(trimmedName)) {
+                alert('An area with this name already exists');
+                return;
+            }
+
+            const index = areas.indexOf(oldName);
+            if (index !== -1) {
+                // Update area name in areas list
+                areas[index] = trimmedName;
+                saveAreas(areas);
+                
+                // Update all OEE entries with the old area name to use the new name
+                const entries = getEntries();
+                const updatedEntries = entries.map(entry => {
+                    if (entry.area === oldName) {
+                        return { ...entry, area: trimmedName };
+                    }
+                    return entry;
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
+                
+                // Update UI immediately
+                renderAreaList();
+                renderDataEntryForm(); // Refresh the form dropdown
+                updateHistoryAreaFilter(); // Update history filter dropdown
+                
+                // Refresh dashboard if it's active
+                if (document.getElementById('dashboard-page').classList.contains('active')) {
+                    loadDashboardData();
+                }
+                
+                // Refresh history table if it's active
+                if (document.getElementById('history-page').classList.contains('active')) {
+                    applyHistoryFilters();
+                }
+            }
+        }
+
+        function renderAreaList() {
+            const areas = getAreas();
+            const areaList = document.getElementById('area-list');
+            
+            areaList.innerHTML = areas.map(area => `
+                <li class="area-item">
+                    <span><strong>${area}</strong></span>
+                    <div class="area-item-actions">
+                        <button class="btn btn-secondary btn-small" onclick="editArea('${area.replace(/'/g, "\\'")}')">✏️ Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteArea('${area.replace(/'/g, "\\'")}')">🗑️ Delete</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        function openAreaModal() {
+            renderAreaList();
+            document.getElementById('area-modal').classList.add('active');
+        }
+
+        function closeAreaModal() {
+            document.getElementById('area-modal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('area-modal');
+            if (event.target === modal) {
+                closeAreaModal();
+            }
+        });
+
+        // Keyboard support for area modal
+        document.addEventListener('keydown', function(event) {
+            const modal = document.getElementById('area-modal');
+            const input = document.getElementById('new-area-input');
+            
+            // Close modal with Escape
+            if (event.key === 'Escape' && modal.classList.contains('active')) {
+                closeAreaModal();
+            }
+            
+            // Add area with Enter when input is focused
+            if (event.key === 'Enter' && document.activeElement === input) {
+                event.preventDefault();
+                addArea();
+            }
+        });
+
+        function cleanupOrphanedEntries() {
+            const validAreas = getAreas();
+            let entries = getEntries();
+            let modified = false;
+            
+            // Add IDs to entries that don't have them
+            entries = entries.map(entry => {
+                if (!entry.id) {
+                    modified = true;
+                    return {
+                        ...entry,
+                        id: Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+                    };
+                }
+                return entry;
+            });
+            
+            // Filter out orphaned entries
+            const cleanedEntries = entries.filter(entry => validAreas.includes(entry.area));
+            
+            // Save if we modified or removed something
+            if (cleanedEntries.length !== getEntries().length || modified) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedEntries));
+                if (cleanedEntries.length !== getEntries().length) {
+                    console.log(`Cleaned up ${getEntries().length - cleanedEntries.length} orphaned entries`);
+                }
+                if (modified) {
+                    console.log('Added IDs to entries without them');
+                }
+            }
+        }
+
+        function initializeSampleData() {
+            if (getEntries().length === 0) {
+                const sampleData = [
+                    {
+                        area: "Press 1",
+                        shift: "Day Shift",
+                        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+                        plannedProductionTime: 480,
+                        runtime: 420,
+                        totalParts: 950,
+                        goodParts: 920,
+                        idealCycleTime: 0.45, // In minutes per part
+                        downtimeReason: "Setup",
+                        availability: 87.5,
+                        performance: 101.79,
+                        quality: 96.84,
+                        oee: 86.23
+                    },
+                    {
+                        area: "Press 2",
+                        shift: "Night Shift",
+                        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+                        plannedProductionTime: 480,
+                        runtime: 450,
+                        totalParts: 1020,
+                        goodParts: 1000,
+                        idealCycleTime: 0.42, // In minutes per part
+                        downtimeReason: "None",
+                        availability: 93.75,
+                        performance: 100.67,
+                        quality: 98.04,
+                        oee: 92.51
+                    },
+                    {
+                        area: "Welding Line A",
+                        shift: "Day Shift",
+                        date: new Date().toISOString().split('T')[0],
+                        plannedProductionTime: 480,
+                        runtime: 410,
+                        totalParts: 870,
+                        goodParts: 850,
+                        idealCycleTime: 0.48, // In minutes per part
+                        downtimeReason: "Material shortage",
+                        availability: 85.42,
+                        performance: 101.95,
+                        quality: 97.70,
+                        oee: 85.08
+                    }
+                ];
+                sampleData.forEach(entry => saveEntry(entry));
+            }
+        }
+
+        // Dashboard Functions
+        function getOEEColor(value) {
+            if (value >= 85) return '#27ae60';
+            if (value >= 70) return '#f39c12';
+            return '#e74c3c';
+        }
+
+        function formatDate(dateString) {
+            // Convert yyyy-mm-dd to dd/mm/yyyy
+            if (!dateString) return '';
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return dateString;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // ML Prediction Functions
+        async function generatePredictions(entries) {
+            const panel = document.getElementById('predictions-panel');
+            const statusEl = document.getElementById('ml-status');
+            
+            if (entries.length < 3) {
+                statusEl.textContent = '📊 Need at least 3 entries for AI predictions';
+                document.getElementById('predicted-oee').textContent = 'N/A';
+                document.getElementById('prediction-confidence').textContent = 'Add more data';
+                document.getElementById('trend-direction').textContent = 'N/A';
+                document.getElementById('trend-detail').textContent = 'Insufficient data';
+                document.getElementById('best-performer').textContent = 'N/A';
+                document.getElementById('best-performer-detail').textContent = '';
+                document.getElementById('needs-attention').textContent = 'N/A';
+                document.getElementById('attention-detail').textContent = '';
+                return;
+            }
+
+            statusEl.textContent = '🤖 Analyzing with Machine Learning...';
+
+            try {
+                // Sort entries by date
+                const sortedEntries = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // 1. Predict Tomorrow's OEE using Simple Linear Regression
+                const oeeValues = sortedEntries.map(e => e.oee);
+                const predictedOEE = predictNextValue(oeeValues);
+                const confidence = calculateConfidence(oeeValues);
+                
+                document.getElementById('predicted-oee').textContent = predictedOEE.toFixed(1) + '%';
+                document.getElementById('predicted-oee').style.color = getOEEColor(predictedOEE);
+                document.getElementById('prediction-confidence').textContent = `Confidence: ${confidence}`;
+
+                // 2. Calculate Trend Direction
+                const trend = calculateTrend(oeeValues);
+                const trendArrow = trend > 0 ? '📈' : trend < 0 ? '📉' : '➡️';
+                const trendText = trend > 0 ? 'Improving' : trend < 0 ? 'Declining' : 'Stable';
+                const trendColor = trend > 0 ? '#27ae60' : trend < 0 ? '#e74c3c' : '#f39c12';
+                
+                document.getElementById('trend-direction').textContent = `${trendArrow} ${trendText}`;
+                document.getElementById('trend-direction').style.color = trendColor;
+                document.getElementById('trend-detail').textContent = `${Math.abs(trend).toFixed(1)}% per day`;
+
+                // 3. Best Performing Area/Shift
+                const bestPerformer = findBestPerformer(entries);
+                document.getElementById('best-performer').textContent = bestPerformer.name;
+                document.getElementById('best-performer').style.color = '#27ae60';
+                document.getElementById('best-performer-detail').textContent = `${bestPerformer.avgOEE.toFixed(1)}% avg OEE`;
+
+                // 4. Area Needing Attention
+                const needsAttention = findWorstPerformer(entries);
+                document.getElementById('needs-attention').textContent = needsAttention.name;
+                document.getElementById('needs-attention').style.color = '#e74c3c';
+                document.getElementById('attention-detail').textContent = `${needsAttention.avgOEE.toFixed(1)}% avg OEE`;
+
+                statusEl.textContent = '✅ AI Analysis Complete';
+                
+            } catch (error) {
+                console.error('Prediction error:', error);
+                statusEl.textContent = '⚠️ Prediction error - check console';
+            }
+        }
+
+        function predictNextValue(values) {
+            // Simple linear regression for time series prediction
+            const n = values.length;
+            const xValues = Array.from({length: n}, (_, i) => i);
+            
+            const sumX = xValues.reduce((a, b) => a + b, 0);
+            const sumY = values.reduce((a, b) => a + b, 0);
+            const sumXY = xValues.reduce((sum, x, i) => sum + x * values[i], 0);
+            const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
+            
+            // Calculate slope and intercept
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            // Predict next value
+            const prediction = slope * n + intercept;
+            
+            // Clamp between 0 and 100
+            return Math.max(0, Math.min(100, prediction));
+        }
+
+        function calculateConfidence(values) {
+            if (values.length < 5) return 'Low';
+            if (values.length < 10) return 'Medium';
+            return 'High';
+        }
+
+        function calculateTrend(values) {
+            if (values.length < 2) return 0;
+            
+            // Calculate average of first half vs second half
+            const mid = Math.floor(values.length / 2);
+            const firstHalf = values.slice(0, mid);
+            const secondHalf = values.slice(mid);
+            
+            const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+            const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+            
+            return (avgSecond - avgFirst) / firstHalf.length;
+        }
+
+        function findBestPerformer(entries) {
+            const areaStats = {};
+            
+            entries.forEach(entry => {
+                if (!areaStats[entry.area]) {
+                    areaStats[entry.area] = { total: 0, count: 0 };
+                }
+                areaStats[entry.area].total += entry.oee;
+                areaStats[entry.area].count++;
+            });
+            
+            let best = { name: 'N/A', avgOEE: 0 };
+            
+            Object.keys(areaStats).forEach(area => {
+                const avg = areaStats[area].total / areaStats[area].count;
+                if (avg > best.avgOEE) {
+                    best = { name: area, avgOEE: avg };
+                }
+            });
+            
+            return best;
+        }
+
+        function findWorstPerformer(entries) {
+            const areaStats = {};
+            
+            entries.forEach(entry => {
+                if (!areaStats[entry.area]) {
+                    areaStats[entry.area] = { total: 0, count: 0 };
+                }
+                areaStats[entry.area].total += entry.oee;
+                areaStats[entry.area].count++;
+            });
+            
+            let worst = { name: 'N/A', avgOEE: 100 };
+            
+            Object.keys(areaStats).forEach(area => {
+                const avg = areaStats[area].total / areaStats[area].count;
+                if (avg < worst.avgOEE) {
+                    worst = { name: area, avgOEE: avg };
+                }
+            });
+            
+            return worst;
+        }
+
+        function toggleStatusDetail() {
+            const detailPanel = document.getElementById('status-detail');
+            if (detailPanel.style.display === 'none') {
+                detailPanel.style.display = 'block';
+                updateStatusDetail();
+            } else {
+                detailPanel.style.display = 'none';
+            }
+        }
+
+        function updateStatusDetail() {
+            const entries = getEntries();
+            const areas = getAreas();
+            const contentDiv = document.getElementById('status-detail-content');
+            
+            if (entries.length === 0) {
+                contentDiv.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No production data available</p>';
+                return;
+            }
+
+            // Get latest entry for each area
+            const latestByArea = {};
+            entries.forEach(entry => {
+                if (!latestByArea[entry.area] || new Date(entry.date) > new Date(latestByArea[entry.area].date)) {
+                    latestByArea[entry.area] = entry;
+                }
+            });
+
+            // Categorize areas
+            const running = [];
+            const issues = [];
+            const noData = [];
+
+            areas.forEach(area => {
+                if (latestByArea[area]) {
+                    const entry = latestByArea[area];
+                    if (entry.oee >= 70) {
+                        running.push({ area, entry });
+                    } else {
+                        issues.push({ area, entry });
+                    }
+                } else {
+                    noData.push(area);
+                }
+            });
+
+            let html = '<div style="display: grid; gap: 1.5rem;">';
+
+            // Running areas
+            if (running.length > 0) {
+                html += '<div style="background: rgba(39, 174, 96, 0.1); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #27ae60;">';
+                html += '<h4 style="color: #27ae60; margin-bottom: 1rem;">✅ Running Well (' + running.length + ')</h4>';
+                running.forEach(({area, entry}) => {
+                    html += `
+                        <div style="background: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${area}</strong>
+                                <div style="font-size: 0.85rem; color: var(--gray);">${entry.shift} • ${formatDate(entry.date)}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #27ae60;">${entry.oee.toFixed(1)}%</div>
+                                <div style="font-size: 0.75rem; color: var(--gray);">OEE</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Areas with issues
+            if (issues.length > 0) {
+                html += '<div style="background: rgba(231, 76, 60, 0.1); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #e74c3c;">';
+                html += '<h4 style="color: #e74c3c; margin-bottom: 1rem;">⚠️ Needs Attention (' + issues.length + ')</h4>';
+                issues.forEach(({area, entry}) => {
+                    const downtimeText = entry.downtimeReason && entry.downtimeReason.trim() !== '' && entry.downtimeReason !== 'None' 
+                        ? entry.downtimeReason 
+                        : 'Performance issue';
+                    html += `
+                        <div style="background: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                <div>
+                                    <strong>${area}</strong>
+                                    <div style="font-size: 0.85rem; color: var(--gray);">${entry.shift} • ${formatDate(entry.date)}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: #e74c3c;">${entry.oee.toFixed(1)}%</div>
+                                    <div style="font-size: 0.75rem; color: var(--gray);">OEE</div>
+                                </div>
+                            </div>
+                            <div style="background: rgba(231, 76, 60, 0.1); padding: 0.75rem; border-radius: 4px;">
+                                <div style="font-size: 0.85rem; color: #e74c3c; font-weight: 600;">📝 Reason:</div>
+                                <div style="font-size: 0.9rem; color: var(--dark); margin-top: 0.25rem;">${downtimeText}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Areas with no data
+            if (noData.length > 0) {
+                html += '<div style="background: rgba(149, 165, 166, 0.1); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #95a5a6;">';
+                html += '<h4 style="color: #95a5a6; margin-bottom: 1rem;">📊 No Recent Data (' + noData.length + ')</h4>';
+                html += '<div style="background: white; padding: 1rem; border-radius: 6px;">';
+                html += noData.map(area => `<span style="display: inline-block; background: var(--light); padding: 0.5rem 1rem; margin: 0.25rem; border-radius: 4px;">${area}</span>`).join('');
+                html += '</div></div>';
+            }
+
+            html += '</div>';
+            contentDiv.innerHTML = html;
+        }
+
+        function updateProductionStatus(entries) {
+            const areas = getAreas();
+            
+            if (entries.length === 0) {
+                document.getElementById('running-count').textContent = '0';
+                document.getElementById('stopped-count').textContent = '0';
+                return;
+            }
+
+            // Get latest entry for each area
+            const latestByArea = {};
+            entries.forEach(entry => {
+                if (!latestByArea[entry.area] || new Date(entry.date) > new Date(latestByArea[entry.area].date)) {
+                    latestByArea[entry.area] = entry;
+                }
+            });
+
+            // Count running vs issues
+            let runningCount = 0;
+            let issuesCount = 0;
+
+            areas.forEach(area => {
+                if (latestByArea[area]) {
+                    if (latestByArea[area].oee >= 70) {
+                        runningCount++;
+                    } else {
+                        issuesCount++;
+                    }
+                } else {
+                    issuesCount++; // No data counts as issue
+                }
+            });
+
+            document.getElementById('running-count').textContent = runningCount;
+            document.getElementById('stopped-count').textContent = issuesCount;
+        }
+
+        function loadDashboardData() {
+            const entries = getEntries();
+            
+            if (entries.length === 0) {
+                document.querySelector('#data-table tbody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No data available. Add your first OEE entry!</td></tr>';
+                return;
+            }
+
+            // Update stats
+            const totalOEE = entries.reduce((sum, entry) => sum + (entry.oee || 0), 0);
+            const avgOEE = totalOEE / entries.length;
+            
+            const totalAvailability = entries.reduce((sum, entry) => sum + (entry.availability || 0), 0);
+            const avgAvailability = totalAvailability / entries.length;
+            
+            const totalPerformance = entries.reduce((sum, entry) => sum + (entry.performance || 0), 0);
+            const avgPerformance = totalPerformance / entries.length;
+            
+            const totalQuality = entries.reduce((sum, entry) => sum + (entry.quality || 0), 0);
+            const avgQuality = totalQuality / entries.length;
+
+            document.getElementById('overall-oee').textContent = avgOEE.toFixed(1) + '%';
+            document.getElementById('overall-oee').style.color = getOEEColor(avgOEE);
+            
+            document.getElementById('avg-availability').textContent = avgAvailability.toFixed(1) + '%';
+            document.getElementById('avg-availability').style.color = getOEEColor(avgAvailability);
+            
+            document.getElementById('avg-performance').textContent = avgPerformance.toFixed(1) + '%';
+            document.getElementById('avg-performance').style.color = getOEEColor(avgPerformance);
+            
+            document.getElementById('avg-quality').textContent = avgQuality.toFixed(1) + '%';
+            document.getElementById('avg-quality').style.color = getOEEColor(avgQuality);
+
+            // Update production status
+            updateProductionStatus(entries);
+
+            // Update timestamp
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('last-updated').textContent = `Last updated: ${timeString}`;
+
+            // Render table
+            const tbody = document.querySelector('#data-table tbody');
+            tbody.innerHTML = '';
+
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formatDate(entry.date)}</td>
+                    <td>${entry.area}</td>
+                    <td>${entry.shift}</td>
+                    <td style="color: ${getOEEColor(entry.availability)}">${entry.availability.toFixed(1)}%</td>
+                    <td style="color: ${getOEEColor(entry.performance)}">${entry.performance.toFixed(1)}%</td>
+                    <td style="color: ${getOEEColor(entry.quality)}">${entry.quality.toFixed(1)}%</td>
+                    <td style="color: ${getOEEColor(entry.oee)}; font-weight: 700;">${entry.oee.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Generate AI predictions
+            generatePredictions(entries);
+        }
+
+        function exportData() {
+            const entries = getEntries();
+            if (entries.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            const headers = Object.keys(entries[0]);
+            const csv = [
+                headers.join(','),
+                ...entries.map(entry => headers.map(header => entry[header]).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `oee-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all OEE data? This cannot be undone.')) {
+                clearEntries();
+                loadDashboardData();
+                alert('All data has been cleared');
+            }
+        }
+
+        // Data Entry Functions
+        function renderDataEntryForm() {
+            const areas = getAreas();
+            const areaOptions = areas.map(area => `<option value="${area}">${area}</option>`).join('');
+            
+            document.getElementById('data-entry-form').innerHTML = `
+                <div class="card">
+                    <h2>Enter OEE Data</h2>
+                    <form id="oee-form" onsubmit="handleFormSubmit(event)">
+                        <div class="form-group">
+                            <label for="area">Production Area</label>
+                            <select id="area" required>
+                                <option value="">Select Area</option>
+                                ${areaOptions}
+                            </select>
+                            <button type="button" class="manage-areas-btn" onclick="openAreaModal()">
+                                ⚙️ Manage Production Areas
+                            </button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shift">Shift</label>
+                            <select id="shift" required>
+                                <option value="">Select Shift</option>
+                                <option value="Day Shift">Day Shift (6:00 AM - 2:00 PM)</option>
+                                <option value="Morning Shift">Morning Shift (7:00 AM - 4:00 PM)</option>
+                                <option value="Half Day">Half Day (7:00 AM - 12:00 PM)</option>
+                                <option value="Afternoon Shift">Afternoon Shift (2:00 PM - 10:00 PM)</option>
+                                <option value="Night Shift">Night Shift (10:00 PM - 6:00 AM)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" required value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plannedProductionTime">Planned Production Time (minutes)</label>
+                            <input type="number" id="plannedProductionTime" required step="0.1" min="0" placeholder="e.g., 480">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="runtime">Actual Runtime (minutes)</label>
+                            <input type="number" id="runtime" required step="0.1" min="0" placeholder="e.g., 420">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="totalParts">Total Parts Produced</label>
+                            <input type="number" id="totalParts" required min="0" placeholder="e.g., 1000">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="goodParts">Good Parts (Quality)</label>
+                            <input type="number" id="goodParts" required min="0" placeholder="e.g., 950">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="idealCycleTime">Ideal Cycle Time (minutes per part)</label>
+                            <input type="number" id="idealCycleTime" required step="0.01" min="0" placeholder="e.g., 0.45">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="downtimeReason">Primary Downtime Reason (if any)</label>
+                            <select id="downtimeReason">
+                                <option value="None">None</option>
+                                <option value="Setup">Setup/Changeover</option>
+                                <option value="Breakdown">Equipment Breakdown</option>
+                                <option value="Material shortage">Material Shortage</option>
+                                <option value="Quality issue">Quality Issue</option>
+                                <option value="Maintenance">Planned Maintenance</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="button-container">
+                            <button type="button" class="btn btn-secondary" onclick="loadPage('dashboard')">
+                                Back to Dashboard
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                💾 Save OEE Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="calculation-result" class="card" style="display: none;">
+                    <h3>✅ OEE Calculation Complete</h3>
+                    <div id="result-content"></div>
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn" onclick="resetForm()">Add Another Entry</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const formData = {
+                area: document.getElementById('area').value,
+                shift: document.getElementById('shift').value,
+                date: document.getElementById('date').value,
+                plannedProductionTime: parseFloat(document.getElementById('plannedProductionTime').value),
+                runtime: parseFloat(document.getElementById('runtime').value),
+                totalParts: parseInt(document.getElementById('totalParts').value),
+                goodParts: parseInt(document.getElementById('goodParts').value),
+                idealCycleTime: parseFloat(document.getElementById('idealCycleTime').value),
+                downtimeReason: document.getElementById('downtimeReason').value
+            };
+
+            // Validate
+            if (formData.goodParts > formData.totalParts) {
+                alert('Good parts cannot exceed total parts!');
+                return;
+            }
+            if (formData.runtime > formData.plannedProductionTime) {
+                alert('Runtime cannot exceed planned production time!');
+                return;
+            }
+
+            // Calculate OEE
+            const availability = (formData.runtime / formData.plannedProductionTime) * 100;
+            const idealTime = formData.totalParts * formData.idealCycleTime; // Already in minutes
+            const performance = (idealTime / formData.runtime) * 100;
+            const quality = (formData.goodParts / formData.totalParts) * 100;
+            const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
+
+            const entry = {
+                ...formData,
+                availability,
+                performance,
+                quality,
+                oee
+            };
+
+            saveEntry(entry);
+            loadDashboardData();
+
+            // Show result
+            document.getElementById('result-content').innerHTML = `
+                <p><strong>Area:</strong> ${formData.area}</p>
+                <p><strong>Shift:</strong> ${formData.shift}</p>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="result-value" style="color: ${getOEEColor(availability)}">${availability.toFixed(1)}%</div>
+                        <div class="result-label">Availability</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" style="color: ${getOEEColor(performance)}">${performance.toFixed(1)}%</div>
+                        <div class="result-label">Performance</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" style="color: ${getOEEColor(quality)}">${quality.toFixed(1)}%</div>
+                        <div class="result-label">Quality</div>
+                    </div>
+                    <div class="result-item" style="background: var(--primary); color: white;">
+                        <div class="result-value" style="color: white">${oee.toFixed(1)}%</div>
+                        <div class="result-label" style="color: var(--light)">Overall OEE</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('calculation-result').style.display = 'block';
+            document.getElementById('calculation-result').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('calculation-result').style.display = 'none';
+            document.getElementById('oee-form').reset();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        }
+
+        // Navigation
+        function loadPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(`${pageId}-page`).classList.add('active');
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.toggle('active', link.getAttribute('data-page') === pageId);
+            });
+
+            if (pageId === 'dashboard') {
+                loadDashboardData();
+            } else if (pageId === 'history') {
+                loadHistoryPage();
+            }
+        }
+
+        // History Page Functions
+        let oeeCharts = {
+            trend: null,
+            metrics: null,
+            area: null
+        };
+
+        function updateHistoryAreaFilter() {
+            const filterAreaSelect = document.getElementById('filter-area');
+            if (!filterAreaSelect) return; // Only update if on history page
+            
+            const currentValue = filterAreaSelect.value; // Save current selection
+            const areas = getAreas();
+            
+            console.log('Updating history filter with areas:', areas); // Debug
+            
+            // Build options HTML
+            let optionsHTML = '<option value="">All Areas</option>';
+            areas.forEach(area => {
+                optionsHTML += `<option value="${area}">${area}</option>`;
+            });
+            
+            filterAreaSelect.innerHTML = optionsHTML;
+            
+            // Restore selection if it still exists
+            if (currentValue && areas.includes(currentValue)) {
+                filterAreaSelect.value = currentValue;
+            }
+        }
+
+        function loadHistoryPage() {
+            // Wait a moment to ensure DOM is ready
+            setTimeout(() => {
+                // Initialize filter dropdowns
+                updateHistoryAreaFilter();
+
+                // Set default date range (last 30 days)
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                
+                document.getElementById('filter-start-date').value = startDate.toISOString().split('T')[0];
+                document.getElementById('filter-end-date').value = endDate.toISOString().split('T')[0];
+
+                // Load data
+                applyHistoryFilters();
+            }, 100);
+        }
+
+        function applyHistoryFilters() {
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+            const selectedArea = document.getElementById('filter-area').value;
+
+            let entries = getEntries();
+
+            // Apply filters
+            if (startDate) {
+                entries = entries.filter(e => e.date >= startDate);
+            }
+            if (endDate) {
+                entries = entries.filter(e => e.date <= endDate);
+            }
+            if (selectedArea) {
+                entries = entries.filter(e => e.area === selectedArea);
+            }
+
+            // Sort by date
+            entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Update charts and table
+            updateTrendChart(entries);
+            updateMetricsChart(entries);
+            updateAreaChart(entries);
+            updateHistoryTable(entries);
+        }
+
+        function resetHistoryFilters() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            
+            document.getElementById('filter-start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('filter-end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('filter-area').value = '';
+            
+            applyHistoryFilters();
+        }
+
+        function updateTrendChart(entries) {
+            const ctx = document.getElementById('oee-trend-chart');
+            
+            if (oeeCharts.trend) {
+                oeeCharts.trend.destroy();
+            }
+
+            if (entries.length === 0) {
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                return;
+            }
+
+            const labels = entries.map(e => formatDate(e.date));
+            const oeeData = entries.map(e => e.oee.toFixed(1));
+
+            oeeCharts.trend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'OEE %',
+                            data: oeeData,
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                            tension: 0.4,
+                            borderWidth: 4,
+                            fill: true,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#f39c12',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'OEE: ' + context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateMetricsChart(entries) {
+            const ctx = document.getElementById('metrics-bar-chart');
+            
+            if (oeeCharts.metrics) {
+                oeeCharts.metrics.destroy();
+            }
+
+            if (entries.length === 0) {
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                return;
+            }
+
+            const avgOEE = entries.reduce((sum, e) => sum + e.oee, 0) / entries.length;
+            const avgAvail = entries.reduce((sum, e) => sum + e.availability, 0) / entries.length;
+            const avgPerf = entries.reduce((sum, e) => sum + e.performance, 0) / entries.length;
+            const avgQual = entries.reduce((sum, e) => sum + e.quality, 0) / entries.length;
+
+            oeeCharts.metrics = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Overall OEE', 'Availability', 'Performance', 'Quality'],
+                    datasets: [{
+                        label: 'Average %',
+                        data: [avgOEE.toFixed(1), avgAvail.toFixed(1), avgPerf.toFixed(1), avgQual.toFixed(1)],
+                        backgroundColor: [
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(155, 89, 182, 0.8)'
+                        ],
+                        borderColor: [
+                            '#f39c12',
+                            '#27ae60',
+                            '#3498db',
+                            '#9b59b6'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 110,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAreaChart(entries) {
+            const ctx = document.getElementById('area-comparison-chart');
+            
+            if (oeeCharts.area) {
+                oeeCharts.area.destroy();
+            }
+
+            // Group existing entries by area and calculate average OEE
+            const areaData = {};
+            entries.forEach(entry => {
+                if (!areaData[entry.area]) {
+                    areaData[entry.area] = {
+                        total: 0,
+                        count: 0
+                    };
+                }
+                areaData[entry.area].total += entry.oee;
+                areaData[entry.area].count++;
+            });
+
+            // Get only areas that have data (dynamic)
+            const areasWithData = Object.keys(areaData);
+            
+            // Build data only for areas with entries
+            const avgOEEs = areasWithData.map(area => {
+                return (areaData[area].total / areaData[area].count).toFixed(1);
+            });
+
+            // All bars get the same blue color since they all have data
+            const barColors = areasWithData.map(() => 'rgba(52, 152, 219, 0.8)');
+            const borderColors = areasWithData.map(() => '#3498db');
+
+            oeeCharts.area = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: areasWithData,
+                    datasets: [{
+                        label: 'Average OEE %',
+                        data: avgOEEs,
+                        backgroundColor: barColors,
+                        borderColor: borderColors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 110,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateHistoryTable(entries) {
+            const container = document.getElementById('history-table-container');
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--gray); padding: 2rem;">No data available for the selected filters.</p>';
+                return;
+            }
+
+            const tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Area</th>
+                            <th>Shift</th>
+                            <th>Availability</th>
+                            <th>Performance</th>
+                            <th>Quality</th>
+                            <th>OEE</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${entries.map((entry, index) => `
+                            <tr>
+                                <td>${formatDate(entry.date)}</td>
+                                <td>${entry.area}</td>
+                                <td>${entry.shift}</td>
+                                <td style="color: ${getOEEColor(entry.availability)}">${entry.availability.toFixed(1)}%</td>
+                                <td style="color: ${getOEEColor(entry.performance)}">${entry.performance.toFixed(1)}%</td>
+                                <td style="color: ${getOEEColor(entry.quality)}">${entry.quality.toFixed(1)}%</td>
+                                <td style="color: ${getOEEColor(entry.oee)}; font-weight: 700;">${entry.oee.toFixed(1)}%</td>
+                                <td>
+                                    <button class="btn btn-secondary btn-small" onclick="editEntry('${entry.id}')" style="margin-right: 0.5rem; padding: 0.5rem 1rem;">✏️ Edit</button>
+                                    <button class="btn btn-danger btn-small" onclick="deleteEntry('${entry.id}')" style="padding: 0.5rem 1rem;">🗑️ Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+
+        // Navigation
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize areas first
+            getAreas(); // This will initialize default areas if none exist
+            
+            // Clean up any orphaned data entries (entries for areas that no longer exist)
+            cleanupOrphanedEntries();
+            
+            initializeSampleData();
+            renderDataEntryForm();
+            loadDashboardData();
+
+            // Setup navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const pageId = e.target.getAttribute('data-page');
+                    loadPage(pageId);
+                });
+            });
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                if (document.getElementById('dashboard-page').classList.contains('active')) {
+                    loadDashboardData();
+                }
+            }, 30000);
+        });
+    </script>
 </body>
 </html>
